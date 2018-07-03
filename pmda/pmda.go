@@ -19,6 +19,10 @@
 //SOFTWARE.
 
 package pmda
+//#cgo CFLAGS: -I .
+//#cgo LDFLAGS: -L . -lpcp -lpcp_pmda
+//#include <pcp/pmapi.h>
+//#include <pcp/pmda.h>
 import "C"
 import "unsafe"
 
@@ -35,21 +39,40 @@ const (
 )
 
 type PMDA interface {
+	PmdaConnect()
+	PmdaMain()
 }
 
 type pmdaInstance struct {
-	pmdaInterface C.pmdaInterface
+	pmdaInterface *C.pmdaInterface
 	domain uint
 	name string
 }
 
-func New(domain uint, name string, version PmdaInterfaceVersion) PMDA {
+func New(version PmdaInterfaceVersion, name string, domain uint, logfile string, help_path string) PMDA {
 	var pmdaInterface C.pmdaInterface
 
 	name_ptr := C.CString(name)
 	defer C.free(unsafe.Pointer(name_ptr))
 
-	C.pmdaDaemon(pmdaInterface, C.int(version), name_ptr, C.int(domain), )
-	return &pmdaInstance{pmdaInterface:pmdaInterface}
+	logfile_ptr := C.CString(logfile)
+	defer C.free(unsafe.Pointer(logfile_ptr))
+
+	help_path_ptr := C.CString(help_path)
+	defer C.free(unsafe.Pointer(help_path_ptr))
+
+	C.pmdaDaemon(&pmdaInterface, C.int(version), name_ptr, C.int(domain), logfile_ptr, help_path_ptr)
+	return &pmdaInstance{pmdaInterface:&pmdaInterface}
 }
 
+func (i *pmdaInstance) PmdaConnect() {
+	C.pmdaConnect(i.pmdaInterface)
+}
+
+func (i *pmdaInstance) PmdaMain() {
+	C.pmdaMain(i.pmdaInterface)
+}
+
+func (i *pmdaInstance) PmdaSetFetchCallback(pmda_fetch_callback func() int) {
+
+}
